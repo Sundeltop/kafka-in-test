@@ -1,10 +1,9 @@
 package com.example;
 
 
-import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.containers.KafkaContainer;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -12,14 +11,14 @@ import org.testcontainers.utility.DockerImageName;
 
 import java.util.List;
 
-import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.rnorth.ducttape.unreliables.Unreliables.retryUntilTrue;
+import static org.junit.jupiter.api.Assertions.assertThrowsExactly;
 
 @Testcontainers
 public class KafkaTest {
 
     private static final String KAFKA_TOPIC = "test-topic";
+    private static final long TIMEOUT = 10000;
 
     private static KafkaContainer kafkaContainer;
 
@@ -27,10 +26,13 @@ public class KafkaTest {
     private static KafkaMessageConsumer consumer;
 
     @BeforeAll
-    static void setUp() {
+    static void setupKafkaContainer() {
         kafkaContainer = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.6.1"));
         kafkaContainer.start();
+    }
 
+    @BeforeEach
+    void setupProducerAndConsumer() {
         producer = new KafkaMessageProducer(kafkaContainer.getBootstrapServers());
         consumer = new KafkaMessageConsumer(kafkaContainer.getBootstrapServers(), List.of(KAFKA_TOPIC));
     }
@@ -42,23 +44,21 @@ public class KafkaTest {
 
         producer.send(KAFKA_TOPIC, key, value);
 
-        retryUntilTrue(10, SECONDS, () -> {
-            ConsumerRecords<String, String> records = consumer.poll(1000);
-            if (records.isEmpty()) {
-                return false;
-            }
-            for (ConsumerRecord<String, String> record : records) {
-                assertEquals(key, record.key());
-                assertEquals(value, record.value());
-            }
-            return true;
-        });
+        final String actualMessage = consumer.getMessage(key, TIMEOUT);
+        assertEquals(value, actualMessage);
+    }
+
+    @Test
+    public void testKafkaMessageConsumerEmptyMessage() {
+        final String key = "test-key";
+
+        final RuntimeException exception = assertThrowsExactly(RuntimeException.class,
+                () -> consumer.getMessage(key, TIMEOUT));
+        assertEquals("Message not found in topic", exception.getMessage());
     }
 
     @AfterAll
-    static void tearDown() {
-        producer.close();
-        consumer.close();
+    static void tearDownKafkaContainer() {
         kafkaContainer.stop();
     }
 }

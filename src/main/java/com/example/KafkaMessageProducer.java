@@ -20,11 +20,8 @@ public class KafkaMessageProducer {
 
     public void send(String topic, String key, String value) {
         producer.send(new ProducerRecord<>(topic, key, value));
-        log.info("Produce kafka message with key: {}, value: {}", key, value);
-    }
-
-    public void close() {
         producer.close();
+        log.info("Produce Kafka Message with key: {}, value: {}", key, value);
     }
 
     private Properties kafkaProducerProperties(String bootstrapServers) {

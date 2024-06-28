@@ -26,8 +26,11 @@ public class KafkaMessageProducer {
     @SneakyThrows
     public void send(String topic, String key, User user) {
         producer.send(new ProducerRecord<>(topic, key, mapper.writeValueAsString(user)));
-        producer.close();
         log.info("Produce Kafka Message with key: {}, value: {}", key, user);
+    }
+
+    public void close() {
+        producer.close();
     }
 
     private Properties kafkaProducerProperties(String bootstrapServers) {

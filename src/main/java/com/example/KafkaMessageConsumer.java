@@ -39,13 +39,15 @@ public class KafkaMessageConsumer {
                 .filter(record -> key.equals(record.key()))
                 .findFirst()
                 .map(this::deserializeRecord)
-                .orElseThrow(() -> {
-                    close();
-                    return new RuntimeException("Message not found in topic");
-                });
+                .orElseThrow(() -> new RuntimeException("Message not found in topic"));
 
-        close();
+        consumer.commitSync();
         return message;
+    }
+
+    public void close() {
+        consumer.unsubscribe();
+        consumer.close();
     }
 
     private Properties kafkaConsumerProperties(String bootstrapServers) {
@@ -61,11 +63,6 @@ public class KafkaMessageConsumer {
 
     private ConsumerRecords<String, String> poll(long timeout) {
         return consumer.poll(ofMillis(timeout));
-    }
-
-    private void close() {
-        consumer.unsubscribe();
-        consumer.close();
     }
 
     private void logRecord(ConsumerRecord<String, String> record) {

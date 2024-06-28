@@ -3,16 +3,14 @@ package com.example;
 
 import com.example.dto.User;
 import com.github.javafaker.Faker;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.testcontainers.containers.KafkaContainer;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 import java.util.List;
 
+import static java.lang.String.valueOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrowsExactly;
 
@@ -58,6 +56,28 @@ public class KafkaTest {
         final RuntimeException exception = assertThrowsExactly(RuntimeException.class,
                 () -> consumer.getMessage(key, TIMEOUT));
         assertEquals("Message not found in topic", exception.getMessage());
+    }
+
+    @Test
+    public void testCommitSyncKafkaMessages() {
+        final User firstUser = new User(new Faker().name().fullName());
+        final User secondUser = new User(new Faker().name().fullName());
+
+        producer.send(KAFKA_TOPIC, valueOf(firstUser.hashCode()), firstUser);
+        producer.send(KAFKA_TOPIC, valueOf(secondUser.hashCode()), secondUser);
+
+        final User actualMessage = consumer.getMessage(valueOf(firstUser.hashCode()), TIMEOUT);
+        assertEquals(firstUser, actualMessage);
+
+        final RuntimeException exception = assertThrowsExactly(RuntimeException.class,
+                () -> consumer.getMessage(valueOf(secondUser.hashCode()), TIMEOUT));
+        assertEquals("Message not found in topic", exception.getMessage());
+    }
+
+    @AfterEach
+    void cleanupProducerAndConsumer() {
+        producer.close();
+        consumer.close();
     }
 
     @AfterAll

@@ -1,6 +1,8 @@
 package com.example;
 
 
+import com.example.dto.User;
+import com.github.javafaker.Faker;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,12 +42,13 @@ public class KafkaTest {
     @Test
     public void testKafkaMessageProducerAndConsumer() {
         final String key = "test-key";
-        final String value = "test-value";
 
-        producer.send(KAFKA_TOPIC, key, value);
+        final User user = new User(new Faker().name().fullName());
 
-        final String actualMessage = consumer.getMessage(key, TIMEOUT);
-        assertEquals(value, actualMessage);
+        producer.send(KAFKA_TOPIC, key, user);
+
+        final User actualMessage = consumer.getMessage(key, TIMEOUT);
+        assertEquals(user, actualMessage);
     }
 
     @Test

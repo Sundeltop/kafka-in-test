@@ -1,5 +1,8 @@
 package com.example;
 
+import com.example.dto.User;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -13,15 +16,18 @@ import static org.apache.kafka.clients.producer.ProducerConfig.*;
 public class KafkaMessageProducer {
 
     private final KafkaProducer<String, String> producer;
+    private final ObjectMapper mapper;
 
     public KafkaMessageProducer(String bootstrapServers) {
         this.producer = new KafkaProducer<>(kafkaProducerProperties(bootstrapServers));
+        mapper = new ObjectMapper();
     }
 
-    public void send(String topic, String key, String value) {
-        producer.send(new ProducerRecord<>(topic, key, value));
+    @SneakyThrows
+    public void send(String topic, String key, User user) {
+        producer.send(new ProducerRecord<>(topic, key, mapper.writeValueAsString(user)));
         producer.close();
-        log.info("Produce Kafka Message with key: {}, value: {}", key, value);
+        log.info("Produce Kafka Message with key: {}, value: {}", key, user);
     }
 
     private Properties kafkaProducerProperties(String bootstrapServers) {
